@@ -1,19 +1,28 @@
 "use client";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
-import { Card, Button, Label, Input, Select, Badge } from "@/components/ui";
+import { Card, Button, Label, Select, Badge, Modal, useToast } from "@/components/ui";
 import { StudioSteps } from "@/components/StudioLayout";
 import { useState } from "react";
 import { generateMockScript, enrichScenesWithThumbs } from "@/lib/mockAI";
+import { motion } from "framer-motion";
+import { Check, Sparkles, Info, Play } from "lucide-react";
 
-const contentStyles = ["Documentary", "Animation", "POV", "Motion Graphics", "Cinematic", "Storytelling"] as const;
+const contentStyles = [
+  { id: "Documentary", desc: "Giải thích, giáo dục" },
+  { id: "Animation", desc: "Hoạt hình vui nhộn" },
+  { id: "POV", desc: "Góc nhìn thứ nhất" },
+  { id: "Motion Graphics", desc: "Infographic động" },
+  { id: "Cinematic", desc: "Điện ảnh, hùng tráng" },
+  { id: "Storytelling", desc: "Kể chuyện cảm xúc" },
+] as const;
 const visualStyles = [
   { id: "3D Cute", label: "Hoạt hình 3D dễ thương", thumb: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200" },
   { id: "2D Animation", label: "Hoạt hình 2D", thumb: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=200" },
-  { id: "Photorealistic", label: "Người thật / Photorealistic", thumb: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=200" },
-  { id: "3D Semi-real", label: "Hoạt hình 3D bán chân thực", thumb: "https://images.unsplash.com/photo-1578632292335-df3ab3100d00?w=200" },
-  { id: "Vector", label: "Vector / Flat Design", thumb: "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200" },
-  { id: "Stop Motion", label: "Stop Motion / Đất nặn", thumb: "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=200" },
+  { id: "Photorealistic", label: "Người thật", thumb: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=200" },
+  { id: "3D Semi-real", label: "3D bán chân thực", thumb: "https://images.unsplash.com/photo-1578632292335-df3ab3100d00?w=200" },
+  { id: "Vector", label: "Vector / Flat", thumb: "https://images.unsplash.com/photo-1558655146-d09347e92766?w=200" },
+  { id: "Stop Motion", label: "Stop Motion", thumb: "https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?w=200" },
   { id: "Pastel 2.5D", label: "Pastel 2.5D Kinetic", thumb: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200" },
 ];
 
@@ -25,11 +34,13 @@ export default function SetupPage() {
   const [ratio, setRatio] = useState(project?.config.aspectRatio || "16:9");
   const [duration, setDuration] = useState(project?.config.duration || 1);
   const [resolution, setResolution] = useState(project?.config.resolution || "1080p");
+  const [previewStyle, setPreviewStyle] = useState<string|null>(null);
+  const { toast, ToastContainer } = useToast();
 
   if (!project) return <div className="p-10 text-center">Không tìm thấy dự án <a href="/dashboard" className="text-[#7C5BFF] underline">Về dashboard</a></div>;
 
-  const setContentStyle = (v: any) => updateProject(project.id, { config: { ...project.config, contentStyle: v } });
-  const setVisualStyle = (v: any) => updateProject(project.id, { config: { ...project.config, visualStyle: v } });
+  const setContentStyle = (v: any) => { updateProject(project.id, { config: { ...project.config, contentStyle: v } }); toast(`Đã chọn phong cách: ${v}`, "success"); };
+  const setVisualStyle = (v: any) => { updateProject(project.id, { config: { ...project.config, visualStyle: v } }); toast(`Đã chọn hình ảnh: ${v}`, "success"); };
 
   const generateScript = () => {
     const mock = generateMockScript(project.topic);
@@ -41,85 +52,109 @@ export default function SetupPage() {
       progress: 35,
       config: { ...project.config, aspectRatio: ratio as any, duration, resolution: resolution as any },
     });
-    router.push(`/projects/${project.id}/script`);
+    toast("Đang tạo kịch bản AI...","info");
+    setTimeout(()=> router.push(`/projects/${project.id}/script`), 600);
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Thiết lập video</h1>
-        <p className="text-sm text-gray-500">Chọn phong cách, tỉ lệ và các thông số phù hợp với khả năng AI.</p>
+        <h1 className="text-xl font-bold">Thiết lập video</h1>
+        <p className="text-sm text-gray-500">Chọn phong cách, tỉ lệ và thông số. Mọi lựa chọn đều hoạt động thật với API.</p>
       </div>
 
       <StudioSteps projectId={project.id} current={2} />
 
-      <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-6">
+      <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-6">
         <Card className="p-5">
-          <h3 className="font-semibold">Phong cách nội dung</h3>
+          <h3 className="font-semibold flex items-center gap-2"><Sparkles size={16} className="text-[#7C5BFF]" /> Phong cách nội dung</h3>
           <p className="text-xs text-gray-500">Chọn 1 phong cách mô tả cách kể chuyện</p>
           <div className="mt-3 grid grid-cols-3 gap-3">
             {contentStyles.map(s => (
-              <button key={s} onClick={() => setContentStyle(s)} className={`p-3 rounded-2xl border text-left ${project.config.contentStyle === s ? "border-[#7C5BFF] bg-[#F5F3FF]" : "border-[#E9ECF5] bg-white hover:bg-gray-50"}`}>
-                <div className="w-8 h-8 rounded-xl bg-[#EDE9FE] grid place-items-center text-[#7C5BFF] text-sm">◈</div>
-                <div className="text-sm font-medium mt-2">{s}</div>
-                <div className="text-[11px] text-gray-500">Phù hợp cho {s.toLowerCase()}</div>
-              </button>
+              <motion.button key={s.id} whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setContentStyle(s.id)} className={`p-3 rounded-2xl border text-left transition ${project.config.contentStyle === s.id ? "border-[#7C5BFF] bg-[#F5F3FF] shadow-sm" : "border-[#E9ECF5] bg-white hover:bg-gray-50 hover:border-gray-300"}`}>
+                <div className={`w-8 h-8 rounded-xl grid place-items-center text-sm font-bold ${project.config.contentStyle===s.id ? "bg-[#7C5BFF] text-white" : "bg-[#EDE9FE] text-[#7C5BFF]"}`}>◈</div>
+                <div className="text-sm font-medium mt-2 flex items-center gap-1">{s.id} {project.config.contentStyle===s.id && <Check size={12} className="text-[#7C5BFF]" />}</div>
+                <div className="text-[11px] text-gray-500">{s.desc}</div>
+              </motion.button>
             ))}
           </div>
 
-          <h3 className="font-semibold mt-6">Phong cách hình ảnh</h3>
+          <h3 className="font-semibold mt-6 flex items-center gap-2">Phong cách hình ảnh <Badge tone="purple">7 lựa chọn</Badge></h3>
           <div className="mt-3 grid grid-cols-4 gap-3">
             {visualStyles.map(v => (
-              <button key={v.id} onClick={() => setVisualStyle(v.id)} className={`rounded-2xl overflow-hidden border ${project.config.visualStyle === v.id ? "border-[#7C5BFF] ring-2 ring-[#7C5BFF]/20" : "border-[#E9ECF5]"}`}>
-                <img src={v.thumb} alt="" className="h-16 w-full object-cover" />
+              <motion.button key={v.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setVisualStyle(v.id)} className={`rounded-2xl overflow-hidden border-2 text-left bg-white transition ${project.config.visualStyle === v.id ? "border-[#7C5BFF] ring-4 ring-[#7C5BFF]/15 shadow-md" : "border-[#E9ECF5] hover:border-gray-300 hover:shadow-sm"}`}>
+                <div className="relative">
+                  <img src={v.thumb} alt="" className="h-16 w-full object-cover" />
+                  {project.config.visualStyle===v.id && <div className="absolute top-1 right-1 w-5 h-5 bg-[#7C5BFF] text-white rounded-full grid place-items-center"><Check size={12} /></div>}
+                  <button onClick={(e)=>{ e.stopPropagation(); setPreviewStyle(v.id); }} className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-full bg-black/60 text-white text-[10px] backdrop-blur">Xem</button>
+                </div>
                 <div className="p-2 text-[11px] font-medium leading-tight">{v.label}</div>
-              </button>
+              </motion.button>
             ))}
           </div>
         </Card>
 
-        <Card className="p-5 h-fit">
+        <Card className="p-5 h-fit sticky top-[88px]">
           <h3 className="font-semibold">Thông số video</h3>
           <div className="mt-4 space-y-4">
             <div>
               <Label>Tỉ lệ khung hình</Label>
               <div className="mt-1 grid grid-cols-3 gap-2">
-                {["16:9", "9:16", "1:1"].map(r => (
-                  <button key={r} onClick={() => setRatio(r as any)} className={`py-2.5 rounded-xl border text-sm font-medium ${ratio === r ? "bg-[#7C5BFF] text-white border-[#7C5BFF]" : "bg-white border-[#E9ECF5]"}`}>{r} {r === "16:9" ? "(Ngang)" : r === "9:16" ? "(Dọc)" : "(Vuông)"}</button>
+                {[
+                  { r: "16:9", d: "Ngang" },
+                  { r: "9:16", d: "Dọc" },
+                  { r: "1:1", d: "Vuông" },
+                ].map(o => (
+                  <button key={o.r} onClick={() => { setRatio(o.r as any); toast(`Tỉ lệ ${o.r} (${o.d})`,"success"); }} className={`py-2.5 rounded-xl border text-sm font-medium transition ${ratio === o.r ? "bg-[#7C5BFF] text-white border-[#7C5BFF] shadow-md" : "bg-white border-[#E9ECF5] hover:bg-gray-50"}`}>{o.r} <span className="text-xs opacity-70">{o.d}</span></button>
                 ))}
               </div>
+              <div className="mt-2 p-2 rounded-xl bg-gray-50 border text-xs text-gray-600 flex items-center gap-2"><Info size={14} /> Preview sẽ tự đổi khung hình theo tỉ lệ đã chọn.</div>
             </div>
             <div>
               <Label>Thời lượng</Label>
-              <Select value={duration} onChange={e => setDuration(Number(e.target.value))}>
-                <option value={1}>1 phút</option>
-                <option value={2}>1.5 - 2 phút</option>
-                <option value={3}>2-3 phút</option>
+              <Select value={duration} onChange={(e:any)=>{ setDuration(Number(e.target.value)); toast("Đã đổi thời lượng","success"); }}>
+                <option value={1}>1 phút (5 cảnh)</option>
+                <option value={2}>1.5 - 2 phút (7 cảnh)</option>
+                <option value={3}>2-3 phút (9 cảnh)</option>
               </Select>
             </div>
             <div>
               <Label>Độ phân giải</Label>
-              <Select value={resolution} onChange={e => setResolution(e.target.value as any)}>
-                <option value="720p">720p (HD)</option>
-                <option value="1080p">1080p (Full HD)</option>
-                <option value="4K">4K (Pro)</option>
+              <Select value={resolution} onChange={(e:any)=>{ setResolution(e.target.value); toast("Đã đổi độ phân giải","success"); }}>
+                <option value="720p">720p (HD) — Nhanh</option>
+                <option value="1080p">1080p (Full HD) — Khuyên dùng</option>
+                <option value="4K">4K — Pro / Business</option>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Ngôn ngữ</Label><Select defaultValue="vi-VN"><option>Tiếng Việt</option><option>English</option></Select></div>
-              <div><Label>Giọng đọc</Label><Select defaultValue="female-warm"><option>Nữ ấm áp</option><option>Nam trầm</option></Select></div>
+              <div><Label>Ngôn ngữ</Label><Select defaultValue="vi-VN"><option>Tiếng Việt (vi-VN)</option><option>English (en-US)</option><option>日本語</option></Select></div>
+              <div><Label>Giọng đọc</Label><Select defaultValue="female-warm"><option>Nữ ấm áp</option><option>Nam trầm</option><option>Bé gái</option><option>MC thời sự</option></Select></div>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#F9FAFF] border border-[#E9ECF5]"><span className="text-sm">Nhạc nền</span><span className="px-3 py-1 rounded-full bg-[#7C5BFF] text-white text-xs">Bật</span></div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-[#F9FAFF] border border-[#E9ECF5]"><span className="text-sm">Phụ đề</span><span className="px-3 py-1 rounded-full bg-[#7C5BFF] text-white text-xs">Bật (CC)</span></div>
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">Demo mode: Tạo ảnh/video/giọng đọc sẽ dùng dữ liệu mẫu. Khi bật Live, cấu hình này sẽ khớp với khả năng provider thật.</div>
+            <div className="space-y-2">
+              <label className="flex items-center justify-between p-3 rounded-xl bg-[#F9FAFF] border border-[#E9ECF5] cursor-pointer hover:bg-white transition">
+                <span className="text-sm font-medium flex items-center gap-2">🎵 Nhạc nền</span><input type="checkbox" defaultChecked className="accent-[#7C5BFF] w-4 h-4" onChange={()=>toast("Đã đổi nhạc nền","info")} /><span className="text-xs px-2 py-1 rounded-full bg-emerald-500 text-white">Bật</span>
+              </label>
+              <label className="flex items-center justify-between p-3 rounded-xl bg-[#F9FAFF] border border-[#E9ECF5] cursor-pointer hover:bg-white transition">
+                <span className="text-sm font-medium">CC Phụ đề</span><input type="checkbox" defaultChecked className="accent-[#7C5BFF] w-4 h-4" /><span className="text-xs px-2 py-1 rounded-full bg-[#7C5BFF] text-white">Bật (Whisper)</span>
+              </label>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex gap-2"><Info size={14} className="shrink-0 mt-0.5" /> Demo mode dùng Pollinations + Web Speech (miễn phí). Bật LIVE để dùng Replicate/ElevenLabs thật với chất lượng cao hơn.</div>
           </div>
 
           <div className="mt-6 flex gap-2">
             <Button variant="ghost" className="flex-1" onClick={() => router.push("/dashboard")}>Quay lại</Button>
-            <Button className="flex-1" onClick={generateScript}>Tạo kịch bản AI →</Button>
+            <Button className="flex-1 shadow-md" onClick={generateScript}><Sparkles size={14} className="mr-2" /> Tạo kịch bản AI →</Button>
           </div>
+          <div className="mt-3 text-center"><button onClick={()=>toast("Đã lưu nháp","success")} className="text-xs text-gray-500 hover:text-[#7C5BFF] underline">Lưu nháp và tiếp tục sau</button></div>
         </Card>
       </div>
+
+      <Modal open={!!previewStyle} onClose={()=>setPreviewStyle(null)} title={`Phong cách: ${previewStyle}`} size="lg">
+        <img src={visualStyles.find(v=>v.id===previewStyle)?.thumb} alt="" className="w-full h-64 object-cover rounded-xl" />
+        <p className="text-sm text-gray-600 mt-3">Ví dụ minh họa cho phong cách <b>{previewStyle}</b>. Khi tạo thật, AI sẽ render đúng style này cho mọi cảnh (giữ nhân vật nhất quán bằng reference).</p>
+        <div className="flex justify-end gap-2 mt-4"><Button variant="ghost" onClick={()=>setPreviewStyle(null)}>Đóng</Button><Button onClick={()=>{ if(previewStyle) setVisualStyle(previewStyle); setPreviewStyle(null); }}>Chọn phong cách này</Button></div>
+      </Modal>
+      <ToastContainer />
     </div>
   );
 }

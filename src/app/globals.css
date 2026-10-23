@@ -5,17 +5,42 @@
 * { scrollbar-width: thin; scrollbar-color: #E5E7EB transparent; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: #F6F7FB;
   color: #111827;
+  -webkit-font-smoothing: antialiased;
 }
-.glass { backdrop-filter: blur(12px); }
 .card { @apply bg-white rounded-2xl border border-[#E9ECF5] shadow-card; }
 .btn-primary { @apply bg-[#7C5BFF] hover:bg-[#6B4EFF] text-white font-medium rounded-xl px-5 py-2.5 transition shadow-sm; }
 .btn-ghost { @apply bg-white border border-[#E5E7EB] hover:bg-gray-50 text-gray-700 font-medium rounded-xl px-5 py-2.5 transition; }
 .input { @apply w-full bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 text-[14px] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7C5BFF]/20 focus:border-[#7C5BFF] transition; }
 .badge { @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium; }
+
+/* Smooth animations */
+* { scroll-behavior: smooth; }
+button, a { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+button:active { transform: scale(0.98); }
+
+/* Modal backdrop blur */
+.backdrop-blur-xl { backdrop-filter: blur(16px); }
+
+/* Shimmer */
 .shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* Float animation */
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.float { animation: float 4s ease-in-out infinite; }
+
+/* Pulse soft */
+@keyframes pulseSoft { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+/* Slide in */
+@keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.slide-in { animation: slideIn 0.3s ease-out; }
+
+/* Sonner toast override */
+[data-sonner-toaster] { z-index: 9999; }
